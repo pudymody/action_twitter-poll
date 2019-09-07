@@ -1,0 +1,25 @@
+name: 'Twitter-Poller'
+description: 'Poll for new tweets and write them to a hugo content file.'
+author: 'pudymody'
+inputs:
+  base:
+    description: 'Path where to write content files. Relative to content folder.'
+    required: false
+    default: './content'
+  image_path:
+    description: 'Path where to write images of content files. Relative to static folder.'
+    required: false
+    default: './static/stream'
+  token:
+    description: 'Twitter token to use the api'
+    required: true
+  user:
+    description: 'Twitter user where to get data'
+    required: true
+  count:
+    description: 'How many tweets to get'
+    required: false
+    default: 50
+runs:
+  using: 'node12'
+  main: 'index.js'

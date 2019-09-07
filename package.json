@@ -1,0 +1,16 @@
+{
+  "name": "@pudymody/twitter_poller",
+  "version": "1.0.0",
+  "description": "A github action to poll for new tweets and likes and make them a Hugo post. Used in my own site to PESOS.",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node index.js"
+  },
+  "author": "Federico Scodelaro <federicoscodelaro@gmail.com> (http://pudymody.github.io/)",
+  "license": "GPL-3.0",
+  "dependencies": {
+    "got": "^9.6.0",
+    "js-yaml": "^3.13.1"
+  }
+}
