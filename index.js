@@ -23,6 +23,7 @@ async function download(url, path){
 	let query = {
 		screen_name: USER,
 		count: COUNT,
+		tweet_mode: 'extended'
 	};
 
 	let LAST_TWEET;
@@ -66,7 +67,7 @@ async function download(url, path){
 
 			tw.in_reply_to_status_id_str = tw.retweeted_status.in_reply_to_status_id_str;
 			tw.in_reply_to_screen_name = tw.retweeted_status.in_reply_to_screen_name;
-			tw.text = tw.retweeted_status.text;
+			tw.full_text = tw.retweeted_status.full_text;
 			tw.entities = tw.retweeted_status.entities;
 		}
 
@@ -82,7 +83,7 @@ async function download(url, path){
 	.map( tw => {
 		if( tw.entities.hasOwnProperty("urls") ){
 			for( let link of tw.entities.urls ){
-				tw.text = tw.text.replace( link.url, "["+link.expanded_url+"]("+link.expanded_url+")")
+				tw.full_text = tw.full_text.replace( link.url, "["+link.expanded_url+"]("+link.expanded_url+")")
 			}
 		}
 
@@ -91,7 +92,7 @@ async function download(url, path){
 	.map( tw => {
 		if( tw.entities.hasOwnProperty("media") ){
 			for( let img of tw.entities.media ){
-				tw.text = tw.text.replace( img.url, "");
+				tw.full_text = tw.full_text.replace( img.url, "");
 				tw.frontMatter.media.push({
 					url: img.media_url_https,
 					path: path.join( "static", IMAGE_PATH, path.basename(img.media_url_https) ),
@@ -120,7 +121,7 @@ async function download(url, path){
 		content = "---\n";
 		content += yaml.safeDump(item.frontMatter);
 		content += "---\n";
-		content += item.text;
+		content += item.full_text;
 
 		if( LAST_TWEET_CREATED_AT < new Date(item.created_at) ){
 			LAST_TWEET_CREATED_AT = new Date(item.created_at);
