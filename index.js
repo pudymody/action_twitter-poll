@@ -116,7 +116,7 @@ async function download(url, path){
 			await download(img.url, img.path);
 		}
 
-		item.frontMatter.media = item.frontMatter.media.map( i => path.join("static", IMAGE_PATH, i.name) );
+		item.frontMatter.media = item.frontMatter.media.map( i => path.join("/", IMAGE_PATH, i.name) );
 
 		content = "---\n";
 		content += yaml.safeDump(item.frontMatter);
