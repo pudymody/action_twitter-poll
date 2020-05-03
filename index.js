@@ -129,37 +129,40 @@ async function download(url, path){
 		try {
 			await fs.promises.mkdir(folder, { recursive: true });
 			await fs.promises.writeFile(folder_index, "");
-
-			for( item of tweets ){
-				let name = item.id_str + ".md";
-				if( item.retweeted_status ){
-					name = "rt_" + name;
-				}
-				const file_path = path.join(BASE, key, name);
-
-				for(let img of item.frontMatter.media){
-					console.log("Wrote a new media");
-					await download(img.url, img.path);
-				}
-
-				item.frontMatter.media = item.frontMatter.media.map( i => path.join("/", IMAGE_PATH, i.name) );
-
-				content = "---\n";
-				content += yaml.safeDump(item.frontMatter);
-				content += "---\n";
-				content += item.full_text;
-
-				if( LAST_TWEET_CREATED_AT < new Date(item.created_at) ){
-					LAST_TWEET_CREATED_AT = new Date(item.created_at);
-					LAST_TWEET = item.id_str;
-				}
-
-				console.log("Wrote a new file");
-				await fs.promises.writeFile( file_path, content);
-			}
 		} catch(err) {
-			throw err;
+			if( err.code != "EEXIST" ){
+				throw err;
+			}
 		}
+
+		for( item of tweets ){
+			let name = item.id_str + ".md";
+			if( item.retweeted_status ){
+				name = "rt_" + name;
+			}
+			const file_path = path.join(BASE, key, name);
+
+			for(let img of item.frontMatter.media){
+				console.log("Wrote a new media");
+				await download(img.url, img.path);
+			}
+
+			item.frontMatter.media = item.frontMatter.media.map( i => path.join("/", IMAGE_PATH, i.name) );
+
+			content = "---\n";
+			content += yaml.safeDump(item.frontMatter);
+			content += "---\n";
+			content += item.full_text;
+
+			if( LAST_TWEET_CREATED_AT < new Date(item.created_at) ){
+				LAST_TWEET_CREATED_AT = new Date(item.created_at);
+				LAST_TWEET = item.id_str;
+			}
+
+			console.log("Wrote a new file");
+			await fs.promises.writeFile( file_path, content);
+		}
+
 	}
 	await fs.promises.writeFile("LAST_TWEET", LAST_TWEET);
 })();
