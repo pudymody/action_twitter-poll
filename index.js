@@ -95,7 +95,7 @@ async function download(url, path){
 				tw.full_text = tw.full_text.replace( img.url, "");
 				tw.frontMatter.media.push({
 					url: img.media_url_https,
-					path: path.join( IMAGE_PATH, path.basename(img.media_url_https) ),
+					path: path.join( "static", IMAGE_PATH, path.basename(img.media_url_https) ),
 					name: path.basename(img.media_url_https),
 				});
 			}
