@@ -161,6 +161,9 @@ async function download(url, path){
 		content += "---\n";
 		content += item.full_text;
 
+		images = item.frontMatter.media.map(url => `![Image](${url})`).join("\n\n");
+		content += `\n\n${images}`;
+
 		if( LAST_TWEET_CREATED_AT < new Date(item.created_at) ){
 			LAST_TWEET_CREATED_AT = new Date(item.created_at);
 			LAST_TWEET = item.id_str;
