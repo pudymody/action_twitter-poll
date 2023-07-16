@@ -5,7 +5,6 @@ const got = require("got");
 
 const BASE = process.env.INPUT_BASE;
 const IMAGE_PATH = process.env.INPUT_IMAGE_PATH;
-const TOKEN = process.env.INPUT_TOKEN;
 const USER = process.env.INPUT_USER;
 const COUNT = process.env.INPUT_COUNT;
 
@@ -19,23 +18,19 @@ async function download(url, path){
 	});
 }
 
-(async function(){
-	let query = {
-		userId: USER,
-		count: COUNT,
-		tweet_mode: 'extended',
-		include_entities: true,
-    include_user_entities: true,
-		include_tweet_replies: true
-	};
+// https://git.sr.ht/~cloutier/bird.makeup/tree/master/item/src/BirdsiteLive.Twitter/Tools/TwitterAuthenticationInitializer.cs#L36
+const _apiKeys =  [
+	["IQKbtAYlXLripLGPWd0HUA", "GgDYlkSvaPxGxC4X8liwpUoqKwwr3lCADbz8A7ADU"], // iPhone
+	["3nVuSoBZnx6U4vzUxf5w", "Bcs59EFbbsdF6Sl9Ng71smgStWEGwXXKSjYvPVt7qys"], // Android
+	["CjulERsDeqhhjSme66ECg", "IQWdVyqFxghAtURHGeGiWAsmCAGmdW3WmbEx6Hck"], // iPad
+	["3rJOl1ODzm9yZy63FACdg", "5jPoQ5kQvMJFDYRNE8bQ4rHuds4xJqhvgNJM4awaE8"], // Mac
+];
 
+(async function(){
 	let LAST_TWEET;
 
 	try {
 		LAST_TWEET = await fs.promises.readFile("LAST_TWEET", "utf8");
-		if( LAST_TWEET !== "" ){
-			query.since_id = LAST_TWEET;
-		}
 	} catch (error) {
 		if( error.code != "ENOENT" ){
 			throw error;
@@ -44,49 +39,68 @@ async function download(url, path){
 
 	let LAST_TWEET_CREATED_AT = 0;
 
-	const gtoken = await got("https://api.twitter.com/1.1/guest/activate.json", {
-		method: "POST",
+	const selectedApi = _apiKeys[Math.floor(Math.random() * _apiKeys.length)]
+	const authBase64 = btoa(`${selectedApi[0]}:${selectedApi[1]}`);
+ 	const bearer = await got("https://api.twitter.com/oauth2/token?grant_type=client_credentials", {
+ 		method: "POST",
+ 		json: true,
 		headers: {
-			authorization: "Bearer " + TOKEN
-		},
-		json: true
-	}).then( ({body}) => body.guest_token );
-
-	let new_tweets = await got(`https://api.twitter.com/2/timeline/profile/${USER}.json`, {
-		method: "GET",
-		headers: {
-			authorization: "Bearer " + TOKEN,
-			"x-guest-token": gtoken
-		},
-		query:query,
-		json: true
-	}).then( ({body}) => body );
-
-	let tweets = [];
-	for( let inst of new_tweets.timeline.instructions ){
-		if( inst.hasOwnProperty("addEntries") ){
-			for(let entry of inst.addEntries.entries ){
-				if( entry.entryId.substr(0,6) === "tweet-" ){
-					const id = entry.entryId.substr(6);
-					if( id <= LAST_TWEET ){
-						break;
-					}
-
-					let tw = new_tweets.globalObjects.tweets[id];
-
-					if( tw !== undefined && tw.hasOwnProperty("retweeted_status_id_str") ){
-						const rt_id = tw.retweeted_status_id_str;
-						tw.retweeted_status = new_tweets.globalObjects.tweets[rt_id];
-						tw.retweeted_status.user = new_tweets.globalObjects.users[tw.retweeted_status.user_id_str];
-					}
-
-					if( tw !== undefined ){
-						tweets.push( tw );
-					}
-				}
-			}
+			authorization: `Basic ${authBase64}`
 		}
-	}
+ 	}).then( ({body}) => body.access_token );
+
+ 	const gtoken = await got("https://api.twitter.com/1.1/guest/activate.json", {
+ 		method: "POST",
+ 		headers: {
+ 			authorization: "Bearer " + bearer
+ 		},
+ 		json: true
+ 	}).then( ({body}) => body.guest_token );
+
+ 	const data = await got(`https://api.twitter.com/graphql/pNl8WjKAvaegIoVH--FuoQ/UserTweetsAndReplies?variables=%7B%22userId%22%3A%22${USER}%22,%22count%22%3A${COUNT},%22includePromotedContent%22%3Atrue,%22withCommunity%22%3Atrue,%22withSuperFollowsUserFields%22%3Atrue,%22withDownvotePerspective%22%3Afalse,%22withReactionsMetadata%22%3Afalse,%22withReactionsPerspective%22%3Afalse,%22withSuperFollowsTweetFields%22%3Atrue,%22withVoice%22%3Atrue,%22withV2Timeline%22%3Atrue%7D&features=%7B%22responsive_web_twitter_blue_verified_badge_is_enabled%22%3Atrue,%22responsive_web_graphql_exclude_directive_enabled%22%3Atrue,%22verified_phone_label_enabled%22%3Afalse,%22responsive_web_graphql_timeline_navigation_enabled%22%3Atrue,%22responsive_web_graphql_skip_user_profile_image_extensions_enabled%22%3Afalse,%22tweetypie_unmention_optimization_enabled%22%3Atrue,%22vibe_api_enabled%22%3Atrue,%22responsive_web_edit_tweet_api_enabled%22%3Atrue,%22graphql_is_translatable_rweb_tweet_is_translatable_enabled%22%3Atrue,%22view_counts_everywhere_api_enabled%22%3Atrue,%22longform_notetweets_consumption_enabled%22%3Atrue,%22tweet_awards_web_tipping_enabled%22%3Afalse,%22freedom_of_speech_not_reach_fetch_enabled%22%3Afalse,%22standardized_nudges_misinfo%22%3Atrue,%22tweet_with_visibility_results_prefer_gql_limited_actions_policy_enabled%22%3Afalse,%22interactive_text_enabled%22%3Atrue,%22responsive_web_text_conversations_enabled%22%3Afalse,%22longform_notetweets_richtext_consumption_enabled%22%3Afalse,%22responsive_web_enhance_cards_enabled%22%3Afalse%7D`, {
+ 		method: "GET",
+ 		headers: {
+ 			authorization: "Bearer " + bearer,
+ 			"x-guest-token": gtoken,
+ 			"x-twitter-active-user": "yes",
+			"Referer": "https://twitter.com/"
+		},
+ 		json: true
+ 	}).then( ({body}) => body );
+
+	let tweets = data.data.user.result.timeline_v2.timeline.instructions.find( i => i.type == "TimelineAddEntries" ).entries.map( a => a.content ).filter(a => a.entryType == "TimelineTimelineItem" || (a.entryType == "TimelineTimelineModule" && a.displayType == "VerticalConversation"))
+	.map(a => {
+		if( a.entryType == "TimelineTimelineItem" ){
+			return a.itemContent.tweet_results.result
+		}
+
+		return a.items.map( b => b.item.itemContent.tweet_results.result )
+	})
+	.flat()
+	.map( a => {
+		if( a.hasOwnProperty("tweet") ){
+			return a.tweet.legacy;
+		}else{
+			return a.legacy;
+		}
+	})
+	.filter( tw => tw.retweeted || tw.user_id_str == USER )
+	.map(a => {
+		if( a.hasOwnProperty("retweeted_status_result") ){
+			if( a.retweeted_status_result.result.hasOwnProperty("legacy") ){
+				a.retweeted_status = a.retweeted_status_result.result.legacy;
+				a.retweeted_status.user = a.retweeted_status_result.result.core.user_results.result.legacy;
+			}
+
+			if( a.retweeted_status_result.result.hasOwnProperty("tweet") ){
+				a.retweeted_status = a.retweeted_status_result.result.tweet.legacy;
+				a.retweeted_status.user = a.retweeted_status_result.result.tweet.core.user_results.result.legacy;
+			}
+
+		}
+
+		return a;
+	});
 
 	tweets = tweets.map( tw => {
 		tw.frontMatter = {
